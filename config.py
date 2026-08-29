@@ -5,8 +5,8 @@ import os
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-JWT_SECRET = os.getenv("JWT_SECRET")
-JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
+JWT_SECRET = os.getenv("JWT_SECRET", "nitkkr-copilot-secret-key-2026-prod-jwt-token")
+JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 1440))
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 UPLOAD_DIR = "uploads/results"
