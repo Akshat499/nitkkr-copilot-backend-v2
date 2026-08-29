@@ -25,9 +25,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)
+    minutes = int(JWT_EXPIRE_MINUTES) if JWT_EXPIRE_MINUTES else 1440
+    expire = datetime.utcnow() + timedelta(minutes=minutes)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, JWT_SECRET, algorithm="HS256")
+    secret = str(JWT_SECRET) if JWT_SECRET else "nitkkr-copilot-secret-key-2026-prod-jwt-token"
+    return jwt.encode(to_encode, secret, algorithm="HS256")
 
 def decode_access_token(token: str) -> dict:
     try:
