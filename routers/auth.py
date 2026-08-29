@@ -44,19 +44,26 @@ def signup(user: UserSignup, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.email == user.email).first()
-    if not db_user or not verify_password(user.password, db_user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+    try:
+        db_user = db.query(User).filter(User.email == user.email).first()
+        if not db_user or not verify_password(user.password, db_user.password_hash):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # Check if student account is approved by admin
-    if db_user.role != "admin" and not db_user.is_approved:
-        raise HTTPException(
-            status_code=403,
-            detail="Your registration request is pending Admin approval. Please contact the administrator."
-        )
+        # Check if student account is approved by admin
+        if db_user.role != "admin" and not db_user.is_approved:
+            raise HTTPException(
+                status_code=403,
+                detail="Your registration request is pending Admin approval. Please contact the administrator."
+            )
 
-    token = create_access_token({"sub": str(db_user.id), "role": db_user.role, "name": db_user.name})
-    return {"access_token": token, "token_type": "bearer", "role": db_user.role, "name": db_user.name}
+        token = create_access_token({"sub": str(db_user.id), "role": db_user.role, "name": db_user.name})
+        return {"access_token": token, "token_type": "bearer", "role": db_user.role, "name": db_user.name}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 
 @router.get("/me")
