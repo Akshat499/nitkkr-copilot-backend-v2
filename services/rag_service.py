@@ -27,7 +27,7 @@ def get_embeddings():
 def get_llm():
     global _llm
     if _llm is None:
-        _llm = ChatGroq(api_key=GROQ_API_KEY, model="groq/compound")
+        _llm = ChatGroq(api_key=GROQ_API_KEY, model="llama3-8b-8192")
     return _llm
 
 def get_vectorstore():
@@ -100,13 +100,13 @@ async def query_notifications(question: str, year: int = None):
 
     # 2. Retrieve top chunks from BOTH notification and announcement vectorstores
     try:
-        r_notif_all = notif_vs.as_retriever(search_kwargs={"k": 5})
+        r_notif_all = notif_vs.as_retriever(search_kwargs={"k": 3})
         docs.extend(r_notif_all.invoke(question))
     except Exception as e:
         print(f"Notification vectorstore retrieval error: {e}")
 
     try:
-        r_ann_all = ann_vs.as_retriever(search_kwargs={"k": 5})
+        r_ann_all = ann_vs.as_retriever(search_kwargs={"k": 3})
         docs.extend(r_ann_all.invoke(question))
     except Exception as e:
         print(f"Announcement vectorstore retrieval error: {e}")
@@ -121,8 +121,8 @@ async def query_notifications(question: str, year: int = None):
             unique_docs.append(d)
 
     context = "\n\n".join([doc.page_content for doc in unique_docs])
-    if len(context) > 3500:
-        context = context[:3500]
+    if len(context) > 1500:
+        context = context[:1500]
 
     prompt = f"""You are an official university AI assistant for NIT Kurukshetra.
 

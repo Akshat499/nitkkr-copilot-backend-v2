@@ -36,7 +36,7 @@ def get_embeddings():
 def get_llm():
     global _llm
     if _llm is None:
-        _llm = ChatGroq(api_key=GROQ_API_KEY, model="groq/compound")
+        _llm = ChatGroq(api_key=GROQ_API_KEY, model="llama3-8b-8192")
     return _llm
 
 def get_result_vectorstore():
@@ -575,8 +575,8 @@ async def extract_student_result(file_path: str, roll_number: str = None, studen
 
     relevant_pages.sort(key=lambda x: x[0])
     context_text = "\n\n--- PAGE BREAK ---\n\n".join([p[1] for p in relevant_pages])
-    if len(context_text) > 2500:
-        context_text = context_text[:2500]
+    if len(context_text) > 1200:
+        context_text = context_text[:1200]
 
     llm = get_llm()
     prompt = f"""You are a university result extraction assistant for NIT Kurukshetra.
@@ -654,8 +654,8 @@ async def query_result_rag(question: str, degree: str = None, branch: str = None
         return "No matching result records found in the database."
 
     context_text = "\n".join([f"• {d.page_content}" for d in docs])
-    if len(context_text) > 2500:
-        context_text = context_text[:2500]
+    if len(context_text) > 1500:
+        context_text = context_text[:1500]
 
     prompt = f"""You are an official NIT Kurukshetra Result Assistant.
 Answer the question accurately based on the result documents provided below.
@@ -982,8 +982,10 @@ async def unified_chat(question: str, user_id: str = None) -> dict:
     if is_announcement:
         try:
             vs = get_announcement_vectorstore()
-            docs = vs.similarity_search(question, k=5)
+            docs = vs.similarity_search(question, k=3)
             context_str = "\n".join([f"• {d.page_content}" for d in docs])
+            if len(context_str) > 1500:
+                context_str = context_str[:1500]
             prompt = f"""You are a helpful NIT Kurukshetra assistant.
 Answer the student's query based on official announcements.
 
