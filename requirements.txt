@@ -19,3 +19,4 @@ langchain-text-splitters
 chromadb
 pypdf
 openpyxl
+email-validator
