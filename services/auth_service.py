@@ -9,10 +9,19 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(pwd_bytes, salt).decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    try:
-        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
-    except Exception:
+    if not plain_password or not hashed_password:
         return False
+    try:
+        pw_bytes = plain_password.encode('utf-8')
+        hash_bytes = hashed_password.encode('utf-8') if isinstance(hashed_password, str) else hashed_password
+        return bcrypt.checkpw(pw_bytes, hash_bytes)
+    except Exception:
+        try:
+            from passlib.context import CryptContext
+            ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+            return ctx.verify(plain_password, hashed_password)
+        except Exception:
+            return False
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
