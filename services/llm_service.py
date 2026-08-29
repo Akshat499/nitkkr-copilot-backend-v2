@@ -9,7 +9,7 @@ engine = create_engine(DATABASE_URL)
 
 llm = ChatGroq(
     api_key=GROQ_API_KEY,
-    model="llama-3.3-70b-versatile"
+    model="llama3-70b-8192"
 )
 
 PROMPT_TEMPLATE = """You are a SQL expert. Convert the user's question to a PostgreSQL SELECT query.
