@@ -36,6 +36,21 @@ async def startup_db_check():
         existing_users = db.query(User).filter((User.is_approved == None) | (User.role == "admin")).all()
         for u in existing_users:
             u.is_approved = True
+        
+        # Ensure default admin user exists
+        admin_user = db.query(User).filter(User.role == "admin").first()
+        if not admin_user:
+            from services.auth_service import hash_password
+            default_admin = User(
+                name="Admin",
+                email="admin@nitkkr.ac.in",
+                password_hash=hash_password("admin@123"),
+                role="admin",
+                is_approved=True
+            )
+            db.add(default_admin)
+            print("✅ Default admin account created (admin@nitkkr.ac.in).")
+
         db.commit()
         print("✅ Database user approval check completed.")
     except Exception as e:
