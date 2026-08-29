@@ -27,7 +27,7 @@ def get_embeddings():
 def get_llm():
     global _llm
     if _llm is None:
-        _llm = ChatGroq(api_key=GROQ_API_KEY, model="llama3-8b-8192")
+        _llm = ChatGroq(api_key=GROQ_API_KEY, model="llama-3.1-8b-instant")
     return _llm
 
 def get_vectorstore():
