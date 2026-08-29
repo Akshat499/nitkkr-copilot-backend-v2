@@ -1,0 +1,11 @@
+.env
+uploads/
+*.log
+venv/
+__pycache__/
+*.pyc
+app.db
+*.sqlite3
+vectorstore/
+vectorstore_results/
+vectorstore_announcements/
