@@ -807,14 +807,20 @@ async def unified_chat(question: str, user_id: str = None) -> dict:
     # Detect intent keywords
     result_keywords = ["result", "marks", "grade", "sgpa", "cgpa", "pass", "fail", "semester result",
                        "score", "subject marks", "mera result", "my result", "percentage", "reappear"]
-    notification_keywords = ["policy", "attendance", "internship", "scholarship", "rule", "regulation",
-                              "notice", "circular", "guideline", "leave", "exam policy", "fee", "holiday",
-                              "raksha", "rakshabandhan", "diwali", "holi", "vacation", "off"]
-    announcement_keywords = ["announcement", "admission", "merit", "scholarship list"]
+    # Policy/rules docs — strict academic policy PDFs only
+    notification_keywords = ["policy", "attendance", "internship", "rule", "regulation",
+                              "guideline", "leave", "exam policy", "fee"]
+    # Announcements, festivals, notices, events — search announcement vectorstore
+    announcement_keywords = ["announcement", "notice", "circular", "notification",
+                              "admission", "merit", "scholarship",
+                              "holiday", "raksha", "rakshabandhan", "diwali", "holi",
+                              "vacation", "off", "festival", "event", "celebration",
+                              "bandhan", "latest", "recent", "new notice"]
 
     is_result = bool(found_roll) or any(k in q_lower for k in result_keywords)
-    is_notification = any(k in q_lower for k in notification_keywords)
     is_announcement = any(k in q_lower for k in announcement_keywords)
+    # Only treat as notification (policy) if NOT already caught by announcement keywords
+    is_notification = any(k in q_lower for k in notification_keywords) and not is_announcement
 
     # Detect aggregate / analytics queries (e.g. "how many students", "cgpa more than 8.5", "topper")
     aggregate_keywords = ["number of", "how many", "count", "list", "top", "topper", "average", "highest",
@@ -969,7 +975,50 @@ async def unified_chat(question: str, user_id: str = None) -> dict:
                 "sources": ["Result Assistant"]
             }
 
-    # ── 2. POLICY / NOTIFICATION QUERY ──────────────────────────────
+    # ── 2. ANNOUNCEMENT QUERY (festivals, notices, events — searched FIRST) ────
+    if is_announcement:
+        try:
+            vs = get_announcement_vectorstore()
+            docs = vs.similarity_search(question, k=4)
+            if docs:
+                context_str = "\n".join([f"• {d.page_content}" for d in docs])
+                if len(context_str) > 2000:
+                    context_str = context_str[:2000]
+                prompt = f"""You are an official NIT Kurukshetra AI assistant.
+Answer the following question STRICTLY based on the official documents provided below.
+
+CRITICAL RULES:
+1. ONLY use information from the DOCUMENT CONTEXT below. Do NOT use your training knowledge.
+2. If the DOCUMENT CONTEXT contains relevant information, present it clearly.
+3. If the DOCUMENT CONTEXT is empty or does not contain information about the topic, respond EXACTLY:
+   "No official announcement regarding this topic has been uploaded to the system."
+4. NEVER generate fake dates, fake schedules, or generic template responses.
+
+DOCUMENT CONTEXT:
+{context_str}
+
+Question: {question}
+
+Answer:"""
+                res = get_llm().invoke(prompt)
+                return {"answer": res.content, "source_type": "announcement", "sources": ["Official Announcements"]}
+            else:
+                # Also check notification vectorstore as fallback
+                try:
+                    from services.rag_service import query_notifications
+                    answer = await query_notifications(question)
+                    return {"answer": answer, "source_type": "notification", "sources": ["Policy Documents"]}
+                except Exception:
+                    pass
+                return {
+                    "answer": "No official announcement regarding this topic has been uploaded to the system. Please check the admin notice board or the official NIT KKR website.",
+                    "source_type": "announcement",
+                    "sources": []
+                }
+        except Exception as e:
+            print(f"Announcement query error: {e}")
+
+    # ── 3. POLICY / NOTIFICATION QUERY ───────────────────────────────
     if is_notification:
         try:
             from services.rag_service import query_notifications
@@ -978,33 +1027,12 @@ async def unified_chat(question: str, user_id: str = None) -> dict:
         except Exception as e:
             pass
 
-    # ── 3. ANNOUNCEMENT QUERY ────────────────────────────────────────
-    if is_announcement:
-        try:
-            vs = get_announcement_vectorstore()
-            docs = vs.similarity_search(question, k=3)
-            context_str = "\n".join([f"• {d.page_content}" for d in docs])
-            if len(context_str) > 1500:
-                context_str = context_str[:1500]
-            prompt = f"""You are a helpful NIT Kurukshetra assistant.
-Answer the student's query based on official announcements.
-
-Context:
-{context_str}
-
-Question: {question}
-
-Answer:"""
-            res = get_llm().invoke(prompt)
-            return {"answer": res.content, "source_type": "announcement", "sources": ["Announcements"]}
-        except Exception as e:
-            pass
-
     # ── 4. GENERAL FALLBACK LLM ─────────────────────────────────────
     llm = get_llm()
     fallback_prompt = f"""You are a helpful AI assistant for NIT Kurukshetra students and faculty.
-Answer the following question in a friendly, helpful way.
-If you don't have specific information about NIT KKR, provide general helpful information.
+Answer the following question accurately.
+IMPORTANT: Do NOT fabricate specific dates, schedules, events, or announcements for NIT KKR.
+If the question is about a specific NIT KKR notice or announcement, say you don't have that information and suggest checking the official NIT KKR website (www.nitkkr.ac.in).
 
 Question: {question}
 
