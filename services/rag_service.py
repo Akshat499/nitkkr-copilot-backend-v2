@@ -20,8 +20,17 @@ _cached_available_years = None
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
-        from langchain_huggingface import HuggingFaceEmbeddings
-        _embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        try:
+            from langchain_huggingface import HuggingFaceEmbeddings
+            _embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        except Exception as e:
+            print(f"⚠️ HuggingFaceEmbeddings load error: {e}. Trying FastEmbedEmbeddings...")
+            try:
+                from langchain_community.embeddings import FastEmbedEmbeddings
+                _embeddings = FastEmbedEmbeddings()
+            except Exception as e2:
+                print(f"⚠️ FastEmbed fallback error: {e2}")
+                raise e
     return _embeddings
 
 def get_llm():
