@@ -63,10 +63,12 @@ async def startup_db_check():
     finally:
         db.close()
 
-    # Run sync_all_results in background after server is live
+    from sync_results import sync_all_results, sync_all_announcements, sync_all_notifications
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, sync_all_results)
-    print("✅ Async result sync background task scheduled.")
+    loop.run_in_executor(None, sync_all_announcements)
+    loop.run_in_executor(None, sync_all_notifications)
+    print("✅ Async background sync tasks scheduled (results, announcements, notifications).")
 
 
 # Include all routers

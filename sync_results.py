@@ -1,8 +1,9 @@
 import os
 import re
 from db import SessionLocal
-from models import Result
-from services.result_extraction_service import index_result_pdf
+from models import Result, Announcement, Notification
+from services.result_extraction_service import index_result_pdf, index_announcement_pdf
+from services.rag_service import index_notification
 
 def sync_all_results():
     db = SessionLocal()
@@ -41,5 +42,40 @@ def sync_all_results():
     finally:
         db.close()
 
+def sync_all_announcements():
+    db = SessionLocal()
+    try:
+        announcements = db.query(Announcement).all()
+        synced = 0
+        for ann in announcements:
+            if os.path.exists(ann.file_path):
+                try:
+                    index_announcement_pdf(ann.file_path, ann.title, ann.id)
+                    synced += 1
+                except Exception as e:
+                    print(f"⚠️ Error syncing announcement {ann.id}: {e}")
+        print(f"✅ Synced & indexed {synced} announcements into vectorstore.")
+    finally:
+        db.close()
+
+def sync_all_notifications():
+    db = SessionLocal()
+    try:
+        notifications = db.query(Notification).all()
+        synced = 0
+        for notif in notifications:
+            if os.path.exists(notif.file_path):
+                try:
+                    year = notif.year or (notif.uploaded_at.year if notif.uploaded_at else 2024)
+                    index_notification(notif.file_path, notif.title, year)
+                    synced += 1
+                except Exception as e:
+                    print(f"⚠️ Error syncing notification {notif.id}: {e}")
+        print(f"✅ Synced & indexed {synced} policy notifications into vectorstore.")
+    finally:
+        db.close()
+
 if __name__ == "__main__":
     sync_all_results()
+    sync_all_announcements()
+    sync_all_notifications()
