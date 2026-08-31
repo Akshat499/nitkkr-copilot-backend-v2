@@ -979,20 +979,19 @@ async def unified_chat(question: str, user_id: str = None) -> dict:
     if is_announcement:
         try:
             vs = get_announcement_vectorstore()
-            docs = vs.similarity_search(question, k=4)
+            docs = vs.similarity_search(question, k=6)
             if docs:
-                context_str = "\n".join([f"• {d.page_content}" for d in docs])
-                if len(context_str) > 2000:
-                    context_str = context_str[:2000]
+                context_str = "\n".join([f"• [{d.metadata.get('title', 'Announcement')}]: {d.page_content}" for d in docs])
+                if len(context_str) > 2500:
+                    context_str = context_str[:2500]
                 prompt = f"""You are an official NIT Kurukshetra AI assistant.
-Answer the following question STRICTLY based on the official documents provided below.
+Answer the following question clearly and helpfully based on the official announcement document context below.
 
 CRITICAL RULES:
-1. ONLY use information from the DOCUMENT CONTEXT below. Do NOT use your training knowledge.
-2. If the DOCUMENT CONTEXT contains relevant information, present it clearly.
-3. If the DOCUMENT CONTEXT is empty or does not contain information about the topic, respond EXACTLY:
-   "No official announcement regarding this topic has been uploaded to the system."
-4. NEVER generate fake dates, fake schedules, or generic template responses.
+1. ONLY use information from the DOCUMENT CONTEXT below. Do NOT hallucinate dates or events not present in context.
+2. If the context contains details about the announcement/notice requested, state the title, key dates, instructions, or holiday details clearly using bold text and markdown lists.
+3. If the DOCUMENT CONTEXT does not contain any relevant information about the topic asked, respond EXACTLY:
+   "No official announcement regarding this topic has been uploaded to the system. Please check the official website or admin notice board."
 
 DOCUMENT CONTEXT:
 {context_str}

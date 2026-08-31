@@ -19,7 +19,7 @@ async def upload_notification(
     db: Session = Depends(get_db),
     current_user: dict = Depends(admin_only)
 ):
-    if file.content_type != "application/pdf":
+    if not file.filename.lower().endswith(".pdf") and file.content_type not in ["application/pdf", "application/x-pdf", "application/octet-stream"]:
         raise HTTPException(status_code=400, detail="Only PDF files allowed")
 
     file_path = await save_notification_file(file)
